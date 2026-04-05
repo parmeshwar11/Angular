@@ -269,3 +269,109 @@ export class SignalDemoComponent {
 	- Use signals to manage and react to workspace configuration changes.
 100. How do you use signals with Angular’s project structure?
 	- Organize signals by feature or domain for maintainable project structure.
+
+## Difference Between set and update Methods
+
+- **set(newValue):** Directly assigns a new value to the signal, replacing the current value.
+	- Example: `count.set(5);` sets the signal value to 5.
+- **update(fn):** Updates the signal’s value based on its current value by applying a function.
+	- Example: `count.update(v => v + 1);` increments the current value by 1.
+
+Use `set` when you know the exact value to assign, and `update` when you want to modify the value based on its previous state.
+
+## Difference Between Writable and Readonly Signals
+
+- **Writable Signal:**
+	- Allows both reading and updating its value.
+	- You can use `.set()` and `.update()` methods to change its value.
+	- Example: `const count = signal(0); count.set(5);`
+
+- **Readonly Signal:**
+	- Can only be read, not updated directly.
+	- Created using the `asReadonly()` method or by returning a signal as readonly from a service/component.
+	- Prevents accidental modification from outside the owner.
+	- Example:
+		```typescript
+		const count = signal(0);
+		const readonlyCount = count.asReadonly();
+		// readonlyCount.set(5); // Error: set is not available
+		```
+
+Use writable signals for internal state management and expose readonly signals to consumers to enforce immutability.
+
+## How to Convert Observable into Signal
+
+Angular provides a utility function called `toSignal` to convert an RxJS Observable into a Signal.
+
+**Example:**
+
+```typescript
+import { Component, computed, effect, signal, toSignal } from '@angular/core';
+import { Observable, interval } from 'rxjs';
+
+@Component({
+	selector: 'app-observable-to-signal',
+	template: `<p>Value: {{ value() }}</p>`
+})
+export class ObservableToSignalComponent {
+	// Example Observable
+	source$: Observable<number> = interval(1000);
+
+	// Convert Observable to Signal
+	value = toSignal(this.source$, { initialValue: 0 });
+}
+```
+
+**Key Points:**
+
+## How to Convert Subject into Signal
+
+A Subject in RxJS is both an Observable and an Observer. To convert a Subject into a Signal, you can use the same `toSignal` utility, since a Subject is an Observable.
+
+**Example:**
+
+```typescript
+import { Component, toSignal } from '@angular/core';
+import { Subject } from 'rxjs';
+
+@Component({
+	selector: 'app-subject-to-signal',
+	template: `
+		<button (click)="emitValue()">Emit Value</button>
+		<p>Latest Value: {{ value() }}</p>
+	`
+})
+export class SubjectToSignalComponent {
+	subject$ = new Subject<number>();
+	value = toSignal(this.subject$, { initialValue: 0 });
+
+	emitValue() {
+		this.subject$.next(Math.floor(Math.random() * 100));
+	}
+}
+```
+
+**Key Points:**
+- A Subject can be converted to a Signal using `toSignal(subject$, { initialValue })`.
+- The Signal will always reflect the latest value emitted by the Subject.
+
+## Difference Between Angular Signals and RxJS Observables
+
+| Feature                | Angular Signals                        | RxJS Observables                |
+|------------------------|----------------------------------------|---------------------------------|
+| Reactivity Model       | Fine-grained, synchronous              | Push-based, asynchronous        |
+| Subscriptions         | No subscriptions needed                | Requires manual subscriptions   |
+| Memory Management      | Automatic, no unsubscribe needed       | Must unsubscribe to avoid leaks |
+| Change Detection       | Triggers only affected consumers       | May trigger broader updates     |
+| Use Case               | Local/component state, UI reactivity   | Streams, async data, events     |
+| API Simplicity         | Simple, function-based                 | Rich, operator-heavy            |
+| Error Handling         | Try/catch in computed/effect           | catchError, error callbacks     |
+| Async Support          | Not for async streams                  | Designed for async streams      |
+| Integration            | Native in Angular (v16+)               | External RxJS library           |
+
+**Key Points:**
+- Signals are best for local, synchronous, and UI-driven state.
+- RxJS Observables are best for asynchronous data streams, events, and complex reactive flows.
+- Signals simplify state management and reduce boilerplate for UI reactivity.
+- Observables provide powerful operators for complex async and event-based logic.
+
