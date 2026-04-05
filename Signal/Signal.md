@@ -375,3 +375,330 @@ export class SubjectToSignalComponent {
 - Signals simplify state management and reduce boilerplate for UI reactivity.
 - Observables provide powerful operators for complex async and event-based logic.
 
+
+# What are Angular Signals and why were they introduced?
+
+**Answer:**
+
+Angular Signals are a reactive primitive introduced in Angular to manage and track state changes in a more predictable and efficient way. Signals allow you to create reactive values that automatically update any consumers when their value changes, similar to observables but with a simpler and more direct API.
+
+**Why were they introduced?**
+
+Signals were introduced to address the limitations of Angular's traditional change detection mechanism, which relies on zone.js and can be inefficient for large or complex applications. With signals, Angular can perform fine-grained reactivity, updating only the parts of the UI that depend on changed values. This leads to better performance, easier state management, and a more modern reactive programming model.
+
+## What is the difference between signal(), computed(), and effect()?
+
+**Answer:**
+
+- **signal()**: Creates a reactive value (signal) that holds state. You can read its value by calling it as a function (e.g., `count()`) and update it using `.set()` or `.update()`. Signals are the basic building blocks for reactive state in Angular.
+
+- **computed()**: Creates a derived (computed) signal whose value is automatically recalculated whenever its dependent signals change. It is used for values that are based on other signals, ensuring the derived value is always up to date.
+
+- **effect()**: Registers a side-effectful function that runs automatically whenever any of its dependent signals change. Use `effect()` to perform actions (like logging, API calls, or DOM updates) in response to signal changes, but not to produce new values.
+
+**Summary Table:**
+
+| Function      | Purpose                                 | Usage Example                  |
+|--------------|-----------------------------------------|-------------------------------|
+| signal()     | Holds and updates reactive state         | `const count = signal(0);`     |
+| computed()   | Derives value from other signals         | `const double = computed(() => count() * 2);` |
+| effect()     | Runs side effects on signal changes      | `effect(() => { console.log(count()); });` |
+
+
+## How do you read and write signal values?
+
+**Answer:**
+
+To **read** a signal's value, call the signal as a function:
+
+```typescript
+const value = count(); // Reads the current value of the signal
+```
+
+To **write** (update) a signal's value, use the `.set()` or `.update()` methods:
+
+- **set(newValue):** Directly assigns a new value to the signal.
+
+	```typescript
+	count.set(5); // Sets the signal value to 5
+	```
+
+- **update(fn):** Updates the signal’s value based on its current value by applying a function.
+
+	```typescript
+	count.update(v => v + 1); // Increments the current value by 1
+	```
+
+**Summary:**
+- Read: `signal()`
+- Write: `signal.set(newValue)` or `signal.update(fn)`
+
+
+## What is the role of computed() and when is it recalculated?
+
+**Answer:**
+
+The `computed()` function in Angular creates a derived signal whose value is automatically calculated based on one or more other signals. Its main role is to keep a value in sync with its dependencies, so you never have to manually update it when the underlying signals change.
+
+**When is it recalculated?**
+
+A computed signal is recalculated automatically whenever any of the signals it depends on change. Angular tracks these dependencies, and only recomputes the value when necessary, ensuring efficient and up-to-date derived state.
+
+**Example:**
+
+```typescript
+const count = signal(2);
+const double = computed(() => count() * 2);
+// double() will always return twice the current value of count
+```
+
+**Summary:**
+- Use `computed()` to derive values from other signals.
+- Recalculation happens automatically and only when dependencies change.
+
+
+## What is the default equality check in signals and how can you customize it?
+
+**Answer:**
+
+By default, Angular signals use strict equality (`===`) to determine if a signal's value has changed. This means the signal will only notify dependents and trigger updates if the new value is not strictly equal to the previous value.
+
+**Customizing the equality check:**
+You can customize the equality check by passing an `equal` function as an option when creating a signal. This function receives the old and new values and should return `true` if they are considered equal (no update), or `false` if they are different (trigger update).
+
+**Example:**
+
+```typescript
+const deepEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const mySignal = signal({ foo: 1 }, { equal: deepEqual });
+```
+
+In this example, the signal uses deep equality for objects, so updates only occur if the object structure actually changes.
+
+**Summary:**
+- Default: strict equality (`===`)
+- Custom: provide an `equal` function when creating the signal
+
+## How does change detection differ when using signals versus zone.js?
+
+**Answer:**
+
+When using **zone.js** (the traditional Angular approach), change detection is triggered globally for the entire component tree whenever any asynchronous event occurs (like user input, HTTP requests, timers, etc.). This can lead to unnecessary checks and updates across many components, even if only a small part of the state has changed.
+
+With **signals**, Angular enables fine-grained reactivity. Change detection is only triggered for components and templates that directly depend on the changed signal. This means updates are more targeted and efficient, reducing unnecessary work and improving performance, especially in large applications.
+
+**Summary:**
+- **zone.js:** Triggers global change detection for most async events, updating many components.
+- **signals:** Triggers change detection only for affected consumers, enabling more efficient and predictable updates.
+
+
+
+# What is toSignal() and toObservable(), and when would you use them?
+
+**Q: What is `toSignal()`?**
+
+**A:**
+`toSignal()` is a utility function in Angular that converts an RxJS Observable into a Signal. This allows you to bridge the world of Observables (asynchronous streams) and Signals (synchronous, fine-grained reactivity). When you use `toSignal(observable, { initialValue })`, the resulting Signal will always reflect the latest value emitted by the Observable.
+
+**When to use `toSignal()`:**
+- When you have an Observable (e.g., from HTTP, RxJS, or Angular services) and want to use its latest value reactively in your component or template as a Signal.
+- To integrate async data streams into the Signals-based reactivity model.
+
+**Example:**
+```typescript
+import { toSignal } from '@angular/core';
+import { Observable } from 'rxjs';
+
+const obs$: Observable<number> = ...;
+const value = toSignal(obs$, { initialValue: 0 });
+```
+
+---
+
+**Q: What is `toObservable()`?**
+
+**A:**
+`toObservable()` is a utility function that converts a Signal into an RxJS Observable. This is useful when you want to expose a Signal's value to APIs or libraries that expect Observables, or when you need to use RxJS operators on a Signal's value.
+
+**When to use `toObservable()`:**
+- When you have a Signal and need to interoperate with code that expects an Observable (e.g., Angular async pipes, RxJS operators, or third-party libraries).
+- To bridge Signals-based state into the Observable ecosystem.
+
+**Example:**
+```typescript
+import { toObservable } from '@angular/core';
+
+const count = signal(0);
+const count$ = toObservable(count);
+```
+
+---
+
+**Summary Table:**
+
+| Function        | Converts           | Use Case                                                      |
+|-----------------|--------------------|---------------------------------------------------------------|
+| `toSignal()`    | Observable → Signal| Use Observable data as a Signal in components/templates       |
+| `toObservable()`| Signal → Observable| Use Signal data in Observable-based APIs or with RxJS         |
+
+**When to use each:**
+- Use `toSignal()` when you want to consume Observable data reactively as a Signal.
+- Use `toObservable()` when you need to expose Signal data to Observable consumers or use RxJS features.
+
+# How do signals interact with OnPush change detection strategy?
+
+**Q: How do signals interact with the OnPush change detection strategy in Angular?**
+
+**A:**
+Signals work seamlessly with Angular's OnPush change detection strategy. When you use OnPush, Angular only checks a component for updates when its inputs change, an event is triggered, or when you manually mark it for check. However, signals provide fine-grained reactivity: when a signal's value changes and that signal is used in a component's template or logic, Angular automatically marks the component for check—even with OnPush enabled.
+
+**Key Points:**
+- Signals trigger updates only for components that depend on them, not the entire component tree.
+- You do not need to manually call `ChangeDetectorRef.markForCheck()` when using signals in templates; Angular handles this automatically.
+- This leads to more efficient rendering and better performance, especially in large applications.
+
+**Example:**
+```typescript
+@Component({
+	selector: 'app-demo',
+	template: `Count: {{ count() }}`,
+	changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class DemoComponent {
+	count = signal(0);
+	// When count.set() is called, the component updates automatically
+}
+```
+
+**Summary:**
+- Signals and OnPush work together to provide highly efficient, targeted updates in Angular apps.
+
+
+# What are the cleanup mechanics of effect() and how do you avoid memory leaks?
+
+**Q: What are the cleanup mechanics of `effect()` and how do you avoid memory leaks?**
+
+**A:**
+The `effect()` function in Angular allows you to register a cleanup callback to release resources or unsubscribe from side effects when the effect is re-executed or destroyed. This is similar to the cleanup function in RxJS's `useEffect` or Angular's `ngOnDestroy`.
+
+**How cleanup works:**
+- Inside the `effect()` callback, you can return a function. This returned function is called automatically before the effect re-runs (due to dependency changes) or when the effect is destroyed (e.g., when the component is destroyed).
+- Use this cleanup function to unsubscribe from observables, remove event listeners, or clean up any resources allocated in the effect.
+
+**Example:**
+```typescript
+effect(() => {
+	const subscription = someObservable.subscribe(...);
+	return () => {
+		subscription.unsubscribe(); // Cleanup
+	};
+});
+```
+
+**How to avoid memory leaks:**
+- Always return a cleanup function from `effect()` when you create subscriptions, event listeners, or allocate resources.
+- For effects inside Angular components, cleanup is automatic when the component is destroyed.
+- Avoid creating long-lived effects outside of component or service lifecycles unless you manage their cleanup manually.
+
+**Summary:**
+- Use the return value of the `effect()` callback for cleanup logic.
+- This ensures resources are released and prevents memory leaks in Angular applications.
+
+# What is untracked() and when would you use it?
+
+**Q: What is `untracked()` in Angular signals and when would you use it?**
+
+**A:**
+`untracked()` is a utility function provided by Angular's signals API that allows you to read the value of a signal without establishing a reactive dependency. Normally, when you access a signal inside a `computed()` or `effect()`, Angular tracks that access and will re-run the computation or effect whenever the signal changes. By wrapping the access in `untracked()`, you tell Angular not to track that signal as a dependency for the current computation or effect.
+
+**When to use `untracked()`:**
+- When you want to read a signal's value inside a `computed()` or `effect()` but do NOT want changes to that signal to trigger recomputation or re-execution.
+- Useful for reading values for logging, debugging, or for one-off logic where reactivity is not desired.
+
+**Example:**
+```typescript
+import { computed, signal, untracked } from '@angular/core';
+
+const count = signal(0);
+const double = computed(() => {
+	const current = untracked(count); // Not tracked as a dependency
+	return current * 2;
+});
+```
+In this example, `double` will not update when `count` changes, because the access is untracked.
+
+**Summary:**
+- Use `untracked()` to read a signal's value without making it a dependency of the current reactive context.
+- This gives you fine-grained control over reactivity and can help avoid unnecessary updates.
+
+# Advanced Angular Signals Q&A
+
+## How would you implement a signal-based service for shared state?
+Create a service with private writable signals for state, expose readonly signals (via asReadonly or computed), and provide methods to update state. Inject the service wherever shared state is needed.
+
+**Example:**
+```typescript
+@Injectable({ providedIn: 'root' })
+export class CounterService {
+	private _count = signal(0);
+	count = this._count.asReadonly();
+
+	increment() { this._count.update(v => v + 1); }
+	reset() { this._count.set(0); }
+}
+```
+
+---
+
+## What is the difference between asReadonly() and computed() for exposing signals?
+- `asReadonly()` returns a readonly view of the original signal (no updates allowed, but value is always in sync).
+- `computed()` creates a new signal derived from the original, which can transform or filter the value.
+
+Use `asReadonly()` to prevent external mutation; use `computed()` to expose a transformed or derived value.
+
+---
+
+## How do you handle async data (like HTTP) with signals?
+Use `toSignal()` to convert an Observable (e.g., from HttpClient) into a signal. This allows you to use async data reactively in your component or template.
+
+**Example:**
+```typescript
+value = toSignal(this.http.get('/api/data'), { initialValue: null });
+```
+
+---
+
+## Can signals replace NgRx or other state management libraries?
+Signals can replace simple state management needs, especially for local or shared state. For large-scale, complex, or cross-cutting state (with effects, middleware, devtools, etc.), libraries like NgRx may still be preferable.
+
+---
+
+## Explain the glitch-free (consistent) update semantics of Angular signals.
+Angular signals guarantee that all computed signals and effects see a consistent state during updates. When multiple signals change, all computations are re-evaluated in topological order, so no intermediate or inconsistent values are observed—this is called “glitch-free” reactivity.
+
+---
+
+## How does Angular's signal graph handle diamond dependency problems?
+Angular’s signal graph ensures that each computed/effect is only re-evaluated once per update, even if it’s reached via multiple paths (the “diamond problem”). This prevents redundant computations and ensures consistency.
+
+---
+
+## What is the allowSignalWrites option in effect() and when is it needed?
+`allowSignalWrites: true` allows you to update signals inside an effect. By default, effects cannot write to signals they depend on (to prevent infinite loops). Use this option only when you intentionally want to update signals in response to other signals.
+
+---
+
+## How do signals work with Angular's new defer blocks (@defer)?
+Signals can be used inside `@defer` blocks to provide reactive data. When the block is activated, it will render with the current signal values and update as those signals change.
+
+---
+
+## How would you implement an undo/redo feature using signals?
+Keep a history stack of previous signal values. On each change, push the old value to the stack. Undo pops from the stack and sets the signal to the previous value. Redo can be implemented with a forward stack.
+
+---
+
+## What are the implications of using signals in a zoneless Angular application?
+Signals enable fine-grained, explicit reactivity without relying on zone.js. In zoneless apps, signals ensure UI updates happen only when needed, improving performance and predictability. You must trigger updates manually for non-signal state.
+
+
